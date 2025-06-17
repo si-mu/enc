@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<ctype.h>
 #include<string.h>
-#define MAX 10
+
 
 void remspaces(char text[]) {
     int in = 0;
