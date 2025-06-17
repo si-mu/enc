@@ -1,192 +1,90 @@
+//S-DES
 import java.util.Scanner;
-
-public class SDES {
-    
-    static int[][] sMatrix0 = {{1, 0, 3, 2}, {3, 2, 1, 0}, {0, 2, 1, 3}, {3, 1, 3, 2}};
-    static int[][] sMatrix1 = {{0, 1, 2, 3}, {2, 0, 1, 3}, {3, 0, 1, 0}, {2, 1, 0, 3}};
-    static int[] p10 = {3, 5, 2, 7, 4, 10, 1, 9, 8, 6};
-    static int[] p8 = {6, 3, 7, 4, 8, 5, 10, 9};
-    static int[] ip = {2, 6, 3, 1, 4, 8, 5, 7};
-    static int[] ep = {4, 1, 2, 3, 2, 3, 4, 1};
-    static int[] p4 = {2, 4, 3, 1};
-    static int[] ipInverse = {4, 1, 3, 5, 7, 2, 8, 6};
-
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        
-        // Input
-        System.out.println("Enter 10-bit key (space separated): ");
-        int[] key = new int[10];
-        for (int i = 0; i < 10; i++) {
-            key[i] = scanner.nextInt();
-        }
-
-        System.out.println("Enter 8-bit plaintext (space separated): ");
-        int[] plaintext = new int[8];
-        for (int i = 0; i < 8; i++) {
-            plaintext[i] = scanner.nextInt();
-        }
-
-        System.out.println("\n---------- KEY GENERATION ----------");
-        int[] k1 = generateKey(key, 1);
-        int[] k2 = generateKey(key, 2);
-
-        System.out.print("\nKey-1: ");
-        printArray(k1);
-        
-        System.out.print("\nKey-2: ");
-        printArray(k2);
-
-        System.out.println("\n---------- S-DES ENCRYPTION ----------");
-        int[] ciphertext = encrypt(plaintext, k1, k2);
-
-        System.out.print("\nCiphertext: ");
-        printArray(ciphertext);
-    }
-
-    // Generate Key 1 or Key 2 from the original 10-bit key
-    static int[] generateKey(int[] key, int round) {
-        int[] permutedKey = new int[10];
-        for (int i = 0; i < 10; i++) {
-            permutedKey[i] = key[p10[i] - 1];
-        }
-
-        // Left shift
-        permutedKey = leftShift(permutedKey, round);
-
-        // Apply p8
-        int[] k = new int[8];
-        for (int i = 0; i < 8; i++) {
-            k[i] = permutedKey[p8[i] - 1];
-        }
-
-        return k;
-    }
-
-    // Left shift based on round (LS-1 or LS-2)
-    static int[] leftShift(int[] key, int round) {
-        int[] left = new int[5];
-        int[] right = new int[5];
-        
-        System.arraycopy(key, 0, left, 0, 5);
-        System.arraycopy(key, 5, right, 0, 5);
-        
-        if (round == 1) {
-            left = leftShiftOnce(left);
-            right = leftShiftOnce(right);
-        } else {
-            left = leftShiftTwice(left);
-            right = leftShiftTwice(right);
-        }
-        
-        int[] newKey = new int[10];
-        System.arraycopy(left, 0, newKey, 0, 5);
-        System.arraycopy(right, 0, newKey, 5, 5);
-
-        return newKey;
-    }
-
-    static int[] leftShiftOnce(int[] arr) {
-        int temp = arr[0];
-        for (int i = 0; i < 4; i++) {
-            arr[i] = arr[i + 1];
-        }
-        arr[4] = temp;
-        return arr;
-    }
-
-    static int[] leftShiftTwice(int[] arr) {
-        arr = leftShiftOnce(arr);
-        arr = leftShiftOnce(arr);
-        return arr;
-    }
-
-    // Encryption process
-    static int[] encrypt(int[] plaintext, int[] k1, int[] k2) {
-        int[] afterIp = permute(plaintext, ip);
-        int[] left = new int[4];
-        int[] right = new int[4];
-        System.arraycopy(afterIp, 0, left, 0, 4);
-        System.arraycopy(afterIp, 4, right, 0, 4);
-
-        int[] epRight = permute(right, ep);
-        int[] afterXor = xor(epRight, k1);
-        int[] sBoxOut = sBoxes(afterXor);
-        int[] p4Out = permute(sBoxOut, p4);
-        int[] leftAfterXor = xor(left, p4Out);
-
-        int[] newLeft = leftAfterXor;
-        int[] newRight = right;
-
-        // Swap left and right
-        int[] temp = newLeft;
-        newLeft = newRight;
-        newRight = temp;
-
-        epRight = permute(newRight, ep);
-        afterXor = xor(epRight, k2);
-        sBoxOut = sBoxes(afterXor);
-        p4Out = permute(sBoxOut, p4);
-        int[] finalLeft = xor(newLeft, p4Out);
-
-        // Combine final result
-        int[] finalOutput = new int[8];
-        System.arraycopy(finalLeft, 0, finalOutput, 0, 4);
-        System.arraycopy(newRight, 0, finalOutput, 4, 4);
-        return permute(finalOutput, ipInverse);
-    }
-
-    // XOR operation
-    static int[] xor(int[] a, int[] b) {
-        int[] result = new int[a.length];
-        for (int i = 0; i < a.length; i++) {
-            result[i] = a[i] ^ b[i];
-        }
-        return result;
-    }
-
-    // S-Boxes operation
-    static int[] sBoxes(int[] input) {
-        int[] output = new int[4];
-
-        int row = toDigit(input[0], input[3]);
-        int col = toDigit(input[1], input[2]);
-        int s0 = sMatrix0[row][col];
-        toBinary(s0, output, 0);
-
-        row = toDigit(input[4], input[7]);
-        col = toDigit(input[5], input[6]);
-        int s1 = sMatrix1[row][col];
-        toBinary(s1, output, 2);
-
-        return output;
-    }
-
-    // Convert 2 bits to a number (0-3)
-    static int toDigit(int a, int b) {
-        return a * 2 + b;
-    }
-
-    // Convert a number to 2-bit binary and store it in the output array
-    static void toBinary(int num, int[] output, int start) {
-        output[start] = (num >> 1) & 1;
-        output[start + 1] = num & 1;
-    }
-
-    // Permute the input array using a given permutation array
-    static int[] permute(int[] input, int[] perm) {
-        int[] output = new int[perm.length];
-        for (int i = 0; i < perm.length; i++) {
-            output[i] = input[perm[i] - 1];
-        }
-        return output;
-    }
-
-    // Print array
-    static void printArray(int[] arr) {
-        for (int i : arr) {
-            System.out.print(i + " ");
-        }
-        System.out.println();
-    }
+class SDES {
+ // Permutation tables
+ private static final int[] P10 = {3, 5, 2, 7, 4, 10, 1, 9, 8, 6};
+ private static final int[] P8 = {6, 3, 7, 4, 8, 5, 10, 9};
+ private static final int[] IP = {2, 6, 3, 1, 4, 8, 5, 7};
+ private static final int[] IP_INV = {4, 1, 3, 5, 7, 2, 8, 6};
+ private static final int[] EP = {4, 1, 2, 3, 2, 3, 4, 1};
+ private static final int[] P4 = {2, 4, 3, 1};
+ private static final int[][] S0 = {
+ {1, 0, 3, 2},
+ {3, 2, 1, 0},
+ {0, 2, 1, 3},
+ {3, 1, 0, 2}
+ };
+ private static final int[][] S1 = {
+ {0, 1, 2, 3},
+ {2, 0, 1, 3},
+ {3, 0, 1, 0},
+ {2, 1, 0, 3}
+ };
+ public static void main(String[] args) {
+ Scanner scanner = new Scanner(System.in);
+ System.out.print("Enter 10-bit key (e.g., 1010000010): ");
+ String key = scanner.next();
+ System.out.print("Enter 8-bit plaintext (e.g., 11010111): ");
+ String plaintext = scanner.next();
+ String[] keys = generateKeys(key);
+ String cipher = encrypt(plaintext, keys[0], keys[1]);
+ System.out.println("Encrypted ciphertext: " + cipher);
+ }
+ // Key Generation
+ public static String[] generateKeys(String key) {
+ String p10 = permute(key, P10);
+ String left = p10.substring(0, 5);
+ String right = p10.substring(5);
+ left = leftShift(left, 1);
+ right = leftShift(right, 1);
+ String k1 = permute(left + right, P8);
+ left = leftShift(left, 2);
+ right = leftShift(right, 2);
+ String k2 = permute(left + right, P8);
+ return new String[]{k1, k2};
+ }
+ // Encryption
+ public static String encrypt(String pt, String k1, String k2) {
+ String ip = permute(pt, IP);
+ String fk1 = fk(ip, k1);
+ String swapped = fk1.substring(4) + fk1.substring(0, 4);
+ String fk2 = fk(swapped, k2);
+ String cipher = permute(fk2, IP_INV);
+ return cipher;
+ }
+ // fk function
+ public static String fk(String bits, String key) {
+ String left = bits.substring(0, 4);
+ String right = bits.substring(4);
+ String ep = permute(right, EP);
+ String xor = xor(ep, key);
+ String sbox = sBoxOutput(xor.substring(0, 4), S0) + sBoxOutput(xor.substring(4), S1);
+ String p4 = permute(sbox, P4);
+ String leftXOR = xor(left, p4);
+ return leftXOR + right;
+ }
+ // Utility Functions
+ public static String permute(String bits, int[] table) {
+ StringBuilder output = new StringBuilder();
+ for (int pos : table) {
+ output.append(bits.charAt(pos - 1));
+ }
+ return output.toString();
+ }
+ public static String leftShift(String bits, int count) {
+ return bits.substring(count) + bits.substring(0, count);
+ }
+ public static String xor(String a, String b) {
+ StringBuilder result = new StringBuilder();
+ for (int i = 0; i < a.length(); i++) {
+result.append(a.charAt(i) == b.charAt(i) ? '0' : '1');
+ }
+ return result.toString();
+ }
+ public static String sBoxOutput(String input, int[][] sbox) {
+ int row = Integer.parseInt("" + input.charAt(0) + input.charAt(3), 2);
+ int col = Integer.parseInt("" + input.charAt(1) + input.charAt(2), 2);
+ int val = sbox[row][col];
+ return String.format("%2s", Integer.toBinaryString(val)).replace(' ', '0');
+ }
 }
