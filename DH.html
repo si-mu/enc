@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title> Diffie-Hellman Key Exchange </title>
+	</head>
+	<body>
+		<script>
+			function modpow(a,b,p){
+				let res = 1;
+				a = a % p;
+				while(b>0){
+					if(b&1){
+					res = (res * a)%p;
+					b--;
+					}
+					a = (a*a)%p;
+					b = Math.floor(b/2);
+				}
+				return res;
+			}
+			
+			function findPrimRoot(p){
+				for(let g = 3;g<p;g++){
+					let powers = new Set();
+					for(let i = 1;i<p;i++){
+						powers.add(modpow(g,i,p));
+					}
+					if(powers.size===p-1)
+						return g;
+				}
+				return -1;
+			}
+			var p,g,x,a,y,b,ka,kb;
+			p = parseInt(prompt("Enter a prime number:"));
+			document.write("The primenumber p is: "+p+"<br>");
+			
+			g = findPrimRoot(p);
+			if(g!= -1)
+				document.write("The primitive root g of p "+p+" is: "+g+"<br>");
+			else
+				document.write("The primitive root doesnt exist for "+p+"<br>");
+			
+			a = parseInt(prompt("Enter alice's private key:"));
+			document.write("The private key of alice is: "+a+"<br>");
+			
+			b = parseInt(prompt("Enter bob's private key:"));
+			document.write("The private key of bob is: "+b+"<br>");
+			
+			x = modpow(g,a,p);
+			y = modpow(g,b,p);
+			
+			ka = modpow(y,a,p);
+			kb = modpow(x,b,p);
+			
+			document.write("Secret key for Alice is: " + ka + "<br>");
+			document.write("Secret key for Bob is: " + kb + "<br>");
+		</script>
+	</body>
+</html> 
